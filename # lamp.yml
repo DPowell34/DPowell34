@@ -5,7 +5,7 @@
  become: true
 
  tasks:
- - name: INstall Apache, MariaDB, PHP, and PHP MySQL module
+ - name: Install Apache, MariaDB, PHP, and PHP MySQL module
     dnf: 
       name:
         - httpd
