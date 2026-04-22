@@ -1,49 +1,48 @@
 # lamp.yml
 ---
 - name: Install LAMP stack on Rocky Linux
- hosts: rocky9
- become: true
+  hosts: rocky9
+  become: true
 
- tasks:
- - name: Install Apache, MariaDB, PHP, and PHP MySQL module
-    dnf: 
-      name:
-        - httpd
-        - mariadb-server
-        - php
-        - php-mysqlnd
-      state: present
+  tasks:
+    - name: Install Apache, MariaDB, PHP, and PHP MySQL module
+      dnf:
+        name:
+          - httpd
+          - mariadb-server
+          - php
+          - php-mysqlnd
+        state: present
 
-   - name: Start and enable Apache  
+    - name: Start and enable Apache
       service:
         name: httpd
         state: started
         enabled: true
-  
-  - name: Start and enable MariaDB
+
+    - name: Start and enable MariaDB
       service:
         name: mariadb
         state: started
         enabled: true
 
-  - name: Start and enable firewalld
+    - name: Start and enable firewalld
       service:
         name: firewalld
         state: started
         enabled: true
 
-  - name: Allow HTTP and HTTPS traffic through the firewall
+    - name: Allow HTTP and HTTPS traffic through the firewall
       ansible.posix.firewalld:
         service: https
         permanent: true
         state: enabled
         immediate: true
 
-  - name: Create a PHP test page
+    - name: Create a PHP test page
       copy:
         dest: /var/www/html/info.php
         content: "<?php phpinfo(); ?>"
         owner: apache
         group: apache
         mode: '0644'
-        
