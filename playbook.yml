@@ -1,0 +1,33 @@
+# httpd.yml
+---
+- hosts: rocky9
+  become: true
+
+  tasks:
+    - name: Remove Apache
+      yum:
+        name: httpd
+        state: absent
+
+    - name: Install latest Apache
+      yum:
+        name: httpd
+        state: latest
+
+    - name: Start Apache and enable it on boot
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+
+    - name: Disable firewalld
+      service:
+        name: firewalld
+        state: stopped
+        enabled: no
+
+    - name: Restart VM
+      shell: sleep 2 && shutdown -r now "Ansible reboot"
+      async: 1
+      poll: 0
+      ignore_errors: true
