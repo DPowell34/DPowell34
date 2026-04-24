@@ -14,7 +14,7 @@
         - php-mysqlnd
       state: present
 
-      - nameStart and enable Apache  
+      - name: Start and enable Apache  
       service:
         name: httpd
         state: started
