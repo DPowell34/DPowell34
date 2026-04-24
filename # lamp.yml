@@ -24,7 +24,7 @@
       service:
         name: mariadb
         state: started
-        enabled: truels 
+        enabled: true
 
   - name: Start and enable firewalld
       service:
