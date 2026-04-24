@@ -29,7 +29,7 @@
     - name: Start and enable firewalld
       service:
         name: firewalld
-        state: started
+        state: stopped
         enabled: true
 
     - name: Allow HTTP and HTTPS traffic through the firewall
