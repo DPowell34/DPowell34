@@ -1,0 +1,68 @@
+---
+# Configures Ubuntu hosts to run apt update + upgrade every day at 08:00 Eastern.
+# The playbook installs a cron job on each host, so updates continue to run
+# even if the Ansible control node is offline.
+#
+# Usage:
+#   ansible-playbook -i inventory.ini daily-updates.yml
+#
+# Make sure the `hosts:` value below matches a group in your inventory.
+
+- name: Configure daily apt update and upgrade at 08:00 Eastern
+  hosts: ubuntu
+  become: true
+
+  vars:
+    update_hour: "8"
+    update_minute: "0"
+    # America/New_York keeps the job at 08:00 *wall-clock* year round
+    # (EST in winter, EDT in summer). See note at the bottom for fixed UTC-5.
+    update_timezone: "America/New_York"
+    upgrade_script: "/usr/local/bin/daily-apt-upgrade.sh"
+    upgrade_log: "/var/log/daily-apt-upgrade.log"
+
+  tasks:
+    - name: Ensure cron is installed
+      ansible.builtin.apt:
+        name: cron
+        state: present
+        update_cache: true
+
+    - name: Deploy the update/upgrade script
+      ansible.builtin.copy:
+        dest: "{{ upgrade_script }}"
+        owner: root
+        group: root
+        mode: "0755"
+        content: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+
+          echo "===== apt run started: $(date '+%Y-%m-%d %H:%M:%S %Z') ====="
+          apt-get update
+          # confdef/confold keep existing config files and avoid interactive prompts
+          apt-get -y \
+            -o Dpkg::Options::="--force-confdef" \
+            -o Dpkg::Options::="--force-confold" \
+            upgrade
+          apt-get -y autoremove
+          apt-get -y autoclean
+          echo "===== apt run finished: $(date '+%Y-%m-%d %H:%M:%S %Z') ====="
+
+    - name: Set the timezone for the scheduled job
+      ansible.builtin.cron:
+        name: CRON_TZ
+        env: true
+        value: "{{ update_timezone }}"
+        cron_file: daily-apt-upgrade
+        user: root
+
+    - name: Schedule the daily update and upgrade
+      ansible.builtin.cron:
+        name: "Daily apt update and upgrade"
+        minute: "{{ update_minute }}"
+        hour: "{{ update_hour }}"
+        job: "{{ upgrade_script }} >> {{ upgrade_log }} 2>&1"
+        cron_file: daily-apt-upgrade
+        user: root
