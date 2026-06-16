@@ -1,0 +1,48 @@
+---
+# clear-cache.yml
+#
+# Installs a cron job that flushes the Linux page cache, dentries, and
+# inodes every 3 hours. It runs `sync` first to write dirty pages to disk,
+# then drops the caches via /proc/sys/vm/drop_caches.
+#
+# Run with:  ansible-playbook -i inventory clear-cache.yml --become
+#
+# NOTE: Dropping caches is non-destructive (no data loss) but the kernel
+# normally manages this memory efficiently on its own. Only schedule this
+# if you have a specific reason (e.g. benchmarking, a misbehaving workload).
+
+- name: Schedule periodic Linux cache clearing
+  hosts: all
+  become: true
+
+  vars:
+    # drop_caches level:
+    #   1 = page cache only
+    #   2 = dentries and inodes
+    #   3 = page cache + dentries + inodes (most thorough)
+    drop_caches_level: 3
+    cron_hour: "*/3"   # every 3 hours
+    cron_minute: "0"
+
+  tasks:
+    - name: Deploy cache-clearing script
+      ansible.builtin.copy:
+        dest: /usr/local/bin/clear-cache.sh
+        mode: "0755"
+        owner: root
+        group: root
+        content: |
+          #!/usr/bin/env bash
+          # Flush dirty pages, then drop caches.
+          set -euo pipefail
+          sync
+          echo {{ drop_caches_level }} > /proc/sys/vm/drop_caches
+
+    - name: Create cron job to run the script every 3 hours
+      ansible.builtin.cron:
+        name: "clear linux cache"
+        user: root
+        minute: "{{ cron_minute }}"
+        hour: "{{ cron_hour }}"
+        job: "/usr/local/bin/clear-cache.sh >> /var/log/clear-cache.log 2>&1"
+        cron_file: clear-cache
